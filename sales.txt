@@ -1,0 +1,113 @@
+public class WarehouseManagement {
+    
+    public static void updateStock(String productName, Integer quantity) {
+        // Safe query using List to avoid 'No rows for assignment' error
+        List<Product__c> products = [
+            SELECT Id, Stock_Quantity__c 
+            FROM Product__c 
+            WHERE Name = :productName LIMIT 1
+        ];
+        
+        if (!products.isEmpty()) {
+            products[0].Stock_Quantity__c += quantity;
+            update products[0];
+            System.debug('Stock updated successfully.');
+        } else {
+            System.debug('Product not found.');
+        }
+    }
+    
+    public static void createOrder(String productName, Integer quantity) {
+        List<Product__c> products = [
+            SELECT Id, Stock_Quantity__c 
+            FROM Product__c 
+            WHERE Name = :productName LIMIT 1
+        ];
+        
+        if (!products.isEmpty()) {
+            Product__c product = products[0];
+            
+            if (product.Stock_Quantity__c >= quantity) {
+                // Deduct stock and update
+                product.Stock_Quantity__c -= quantity;
+                update product;
+                
+                // Create Order
+                Order__c newOrder = new Order__c(
+                    Product_Name__c = productName,
+                    Quantity__c = quantity
+                );
+                insert newOrder;
+                System.debug('Order created successfully.');
+            } else {
+                System.debug('Insufficient stock');
+            }
+        } else {
+            System.debug('Product not found.');
+        }
+    }
+}
+
+
+
+
+
+
+
+
+trigger StockValidation on Order__c (before insert) {
+    // Step 1: Collect all product names from the incoming orders
+    Set<String> productNames = new Set<String>();
+    for (Order__c ord : Trigger.new) {
+        if (ord.Product_Name__c != null) {
+            productNames.add(ord.Product_Name__c);
+        }
+    }
+    
+    // Step 2: Query products outside the loop and store in a Map
+    Map<String, Product__c> productMap = new Map<String, Product__c>();
+    for (Product__c prod : [SELECT Name, Stock_Quantity__c FROM Product__c WHERE Name IN :productNames]) {
+        productMap.put(prod.Name, prod);
+    }
+    
+    // Step 3: Validate each order against the mapped stock
+    for (Order__c ord : Trigger.new) {
+        Product__c product = productMap.get(ord.Product_Name__c);
+        
+        if (product != null && ord.Quantity__c > product.Stock_Quantity__c) {
+            ord.addError('Not enough stock available');
+        } else if (product == null) {
+            ord.addError('Product not found in inventory');
+        }
+    }
+}
+
+
+
+
+
+
+
+
+// 1. Insert Sample Products
+Product__c p1 = new Product__c(Name='Laptop', Stock_Quantity__c=50);
+Product__c p2 = new Product__c(Name='Mobile', Stock_Quantity__c=30);
+Product__c p3 = new Product__c(Name='Tablet', Stock_Quantity__c=20);
+insert new List<Product__c>{p1, p2, p3};
+System.debug('1. Product records inserted successfully.');
+
+// 2. Query and Display Products
+List<Product__c> prodList = [SELECT Name, Stock_Quantity__c FROM Product__c WHERE Name IN ('Laptop', 'Mobile', 'Tablet')];
+String queryResult = '2. Query shows ';
+for(Integer i=0; i<prodList.size(); i++) {
+    queryResult += prodList[i].Name + ' (' + prodList[i].Stock_Quantity__c + ')';
+    if(i < prodList.size() - 1) queryResult += ', ';
+}
+System.debug(queryResult + '.');
+
+// 3. Attempt to create an order that exceeds stock
+System.debug('3. When attempting to create order for 100 Laptops:');
+WarehouseManagement.createOrder('Laptop', 100);
+
+// 4. Verification message
+System.debug('4. Order insertion prevented when stock is insufficient.');
