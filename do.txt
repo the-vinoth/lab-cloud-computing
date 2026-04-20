@@ -1,0 +1,24 @@
+:: --- PHASE 1: Folder & Files Setup ---
+mkdir docker_lab
+cd docker_lab
+
+:: (Keezha irukka 3 commands-um Notepad-ah open pannum. Ulla code-ah paste panni Save & Close pannunga)
+notepad app.py
+notepad requirements.txt
+notepad Dockerfile
+
+:: --- PHASE 2: Build & Run ---
+docker build -t doc-app .
+docker images
+docker run -p 5000:5000 doc-app
+
+:: --- PHASE 3: Docker Hub Push & Pull ---
+:: (Munnadiye login panni irundha idhu thevai illai)
+docker login
+
+:: (Image-ah link panni upload panradhu)
+docker tag doc-app unga_username/doc-app
+docker push unga_username/doc-app
+
+:: (Internet-la irundhu download panradhu)
+docker pull unga_username/doc-app
