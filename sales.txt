@@ -109,5 +109,33 @@ System.debug(queryResult + '.');
 System.debug('3. When attempting to create order for 100 Laptops:');
 WarehouseManagement.createOrder('Laptop', 100);
 
+
+
+
+
+
+
+// 1. Insert Sample Products
+Product__c p1 = new Product__c(Name='Laptop', Stock_Quantity__c=50);
+Product__c p2 = new Product__c(Name='Mobile', Stock_Quantity__c=30);
+Product__c p3 = new Product__c(Name='Tablet', Stock_Quantity__c=20);
+insert new List<Product__c>{p1, p2, p3};
+System.debug('1. Product records inserted successfully.');
+
+// 2. Query and Display Products (FIXED: Querying only by current IDs)
+List<Product__c> prodList = [SELECT Name, Stock_Quantity__c FROM Product__c WHERE Id IN (:p1.Id, :p2.Id, :p3.Id)];
+String queryResult = '2. Query shows ';
+for(Integer i=0; i<prodList.size(); i++) {
+    queryResult += prodList[i].Name + ' (' + prodList[i].Stock_Quantity__c + ')';
+    if(i < prodList.size() - 1) queryResult += ', ';
+}
+System.debug(queryResult + '.');
+
+// 3. Attempt to create an order that exceeds stock
+System.debug('3. When attempting to create order for 100 Laptops:');
+WarehouseManagement.createOrder('Laptop', 100);
+
+// 4. Verification message
+System.debug('4. Order insertion prevented when stock is insufficient.');
 // 4. Verification message
 System.debug('4. Order insertion prevented when stock is insufficient.');
